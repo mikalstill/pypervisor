@@ -101,3 +101,26 @@ class kvm_sregs_t(ctypes.Structure):
             ctypes.c_uint64 * ((KVM_NR_INTERRUPTS + 63) // 64)
         ),
     ]
+
+
+class kvm_regs_t(ctypes.Structure):
+    _fields_ = [
+        ('rax', ctypes.c_uint64),
+        ('rbx', ctypes.c_uint64),
+        ('rcx', ctypes.c_uint64),
+        ('rdx', ctypes.c_uint64),
+	    ('rsi', ctypes.c_uint64),
+        ('rdi', ctypes.c_uint64),
+        ('rsp', ctypes.c_uint64),
+        ('rbp', ctypes.c_uint64),
+	    ('r8', ctypes.c_uint64),
+        ('r9', ctypes.c_uint64),
+        ('r10', ctypes.c_uint64),
+        ('r11', ctypes.c_uint64),
+	    ('r12', ctypes.c_uint64),
+        ('r13', ctypes.c_uint64),
+        ('r14', ctypes.c_uint64),
+        ('r15', ctypes.c_uint64),
+	    ('rip', ctypes.c_uint64),
+        ('rflags', ctypes.c_uint64),
+    ]

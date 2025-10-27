@@ -10,4 +10,7 @@ void main(){
     printf("KVM_GET_VCPU_MMAP_SIZE = %lu\n", KVM_GET_VCPU_MMAP_SIZE);
     printf("KVM_GET_SREGS = %lu\n", KVM_GET_SREGS);
     printf("KVM_SET_SREGS = %lu\n", KVM_SET_SREGS);
+    printf("KVM_GET_REGS = %lu\n", KVM_GET_REGS);
+    printf("KVM_SET_REGS = %lu\n", KVM_SET_REGS);
+    printf("KVM_RUN = %lu\n", KVM_RUN);
 }

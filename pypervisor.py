@@ -9,11 +9,10 @@
 import ctypes
 import fcntl
 import mmap
-import os
-import struct
 import sys
 
 from displayhelpers import *
+from exitcodes import *
 from ioctls import *
 from structs import *
 
@@ -130,13 +129,94 @@ def main():
         print(pretty_print_struct(kvm_run_s))
         print()
 
-        # Read and then update the vCPU special registers
+        # Read the initial state of the vCPU special registers
         sregs = kvm_sregs_t()
         fcntl.ioctl(vcpu, KVM_GET_SREGS, sregs)
         print('Initial vCPU special registers state')
         print()
         print(pretty_print_sregs(sregs))
         print()
+
+        # Setup sregs per the LWN article. cs by default points to the
+        # reset vector at 16 bytes below the top of memory. We want to start
+        # at the begining of memory instead.
+        sregs.cs.base = 0
+        sregs.cs.selector = 0
+        fcntl.ioctl(vcpu, KVM_SET_SREGS, sregs)
+
+        # Read back to validate the change
+        sregs = kvm_sregs_t()
+        fcntl.ioctl(vcpu, KVM_GET_SREGS, sregs)
+        print('CS updated vCPU special registers state')
+        print()
+        print(pretty_print_sregs(sregs))
+        print()
+
+        # Read the initial state of the vCPU standard registers
+        regs = kvm_regs_t()
+        fcntl.ioctl(vcpu, KVM_GET_REGS, regs)
+        print('Initial vCPU standard registers state')
+        print()
+        print(pretty_print_struct(regs))
+        print()
+
+        # Setup regs per the LWN article. We set the instruction pointer (IP)
+        # to 0x1000 relative to the CS at 0, set RAX and RBX to 2 each as our
+        # initial inputs to our program, and set the flags to 0x2 as this is
+        # documented as the start state of the CPU.
+        regs.rip = 0x1000
+        regs.rax = 2
+        regs.rbx = 2
+        regs.rflags = 0x2
+        fcntl.ioctl(vcpu, KVM_SET_REGS, regs)
+
+        # Read back to validate the change
+        regs = kvm_regs_t()
+        fcntl.ioctl(vcpu, KVM_GET_REGS, regs)
+        print('Updated vCPU standard registers state')
+        print()
+        print(pretty_print_struct(regs))
+        print()
+
+        # Set the memory to contain our simple demo program, which is from
+        # the LWN article again. Its important to note that the memory we
+        # mapped earlier is accessible to _both_ this userspace program and
+        # the vCPU, so we can totally poke around in it if we want.
+        program = bytes([
+            0xba,       # mov $0x3f8, %dx
+            0xf8,
+            0x03,
+            0x00,       # add %bl, %al
+            0xd8,
+            0x04,       # add $'0', %al
+            ord('0'),
+            0xee,       # out %al, (%dx)
+            0xb0,       # mov $'\n', %al
+            ord('\n'),
+            0xee,       # out %al, (%dx)
+            0xf4,       # hlt
+        ])
+        mem[0:len(program)] = program
+
+        # And we now enter into the VMM main loop, which is where we sit for
+        # the lifetime of the virtual machine. Each return from the ioctl is
+        # called a "VM Exit" and indicates that a protection violation in
+        # the vCPU has signalled a request for us to do something.
+        while True:
+            fcntl.ioctl(vcpu, KVM_RUN)
+            kvm_run_s = kvm_run_t.from_buffer(kvm_run)
+            exit_reason = VM_EXIT_CODES[kvm_run_s.exit_reason]
+            print(f'VM exit: {exit_reason}')
+
+            if exit_reason == 'KVM_EXIT_INTERNAL_ERROR':
+                print('Internal errors are probably bad?')
+                sys.exit(1)
+            if exit_reason == 'KVM_EXIT_HLT':
+                print('Program complete (halted)')
+                sys.exit(0)
+
+            print('Unhandled VM exit!')
+            sys.exit(1)
 
 
 if __name__ == '__main__':

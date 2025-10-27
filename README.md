@@ -27,5 +27,6 @@ And then helpers which are kept out of `pypervisor.py` to make this a bit
 clearer:
 
 * `displayhelpers.py`: display helpers for the various data structures.
+* `exitcodes.py`: the various codes that a VM exit could use.
 * `ioctls.py`: ioctl magic numbers extracted by the code generation above.
 * `structs.py`: the various kernel data structures we need.
