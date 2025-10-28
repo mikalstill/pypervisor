@@ -19,8 +19,8 @@ def pretty_print_struct(s, ignore_fields=[]):
         row = [
             field_name,
             f'{field_type.__name__} ({size} bytes)'
-            ]
-        
+        ]
+
         value = getattr(s, field_name)
         if isinstance(value, int):
             row.append(f'      0x{value:x} ({value})')
@@ -49,7 +49,7 @@ def pretty_print_sregs(s):
     field_names = ['Name']
     field_types = ['']
     rows = []
-    
+
     for register_name in ['cs', 'ds', 'es', 'fs', 'gs', 'ss', 'tr', 'ldt']:
         reg_s = getattr(s, register_name)
         row = [register_name]
@@ -60,7 +60,7 @@ def pretty_print_sregs(s):
             value = getattr(reg_s, field_name)
             row.append(f'0x{value:x} ({value})')
         rows.append(row)
-    
+
     table.field_names = field_names
     table.add_row(field_types)
     for row in rows:
@@ -71,11 +71,11 @@ def pretty_print_sregs(s):
     out += 'Descriptor tables:\n'
     table = PrettyTable()
     table.align = 'l'
-    
+
     field_names = ['Name']
     field_types = ['']
     rows = []
-    
+
     for dtable_name in ['gdt', 'idt']:
         reg_s = getattr(s, dtable_name)
         row = [dtable_name]
@@ -92,7 +92,7 @@ def pretty_print_sregs(s):
             else:
                 row.append(f'0x{value:x} ({value})')
         rows.append(row)
-    
+
     table.field_names = field_names
     table.add_row(field_types)
     for row in rows:

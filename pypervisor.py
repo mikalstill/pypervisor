@@ -111,7 +111,7 @@ def main():
                 f'{e.strerror}'
             )
             sys.exit(1)
-        
+
         print()
         print(f'The KVM run structure is {kvm_run_size} bytes')
 
@@ -161,10 +161,12 @@ def main():
         print()
 
         # Setup regs per the LWN article. We set the instruction pointer (IP)
-        # to 0x1000 relative to the CS at 0, set RAX and RBX to 2 each as our
+        # to 0x0 relative to the CS at 0, set RAX and RBX to 2 each as our
         # initial inputs to our program, and set the flags to 0x2 as this is
-        # documented as the start state of the CPU.
-        regs.rip = 0x1000
+        # documented as the start state of the CPU. Note that the LWN article
+        # originally had the code at 0x1000, which is super confusing because
+        # that's outside the 4kb of memory we actually allocated.
+        regs.rip = 0x0
         regs.rax = 2
         regs.rbx = 2
         regs.rflags = 0x2
@@ -208,15 +210,26 @@ def main():
             exit_reason = VM_EXIT_CODES[kvm_run_s.exit_reason]
             print(f'VM exit: {exit_reason}')
 
-            if exit_reason == 'KVM_EXIT_INTERNAL_ERROR':
-                print('Internal errors are probably bad?')
-                sys.exit(1)
-            if exit_reason == 'KVM_EXIT_HLT':
-                print('Program complete (halted)')
-                sys.exit(0)
+            match exit_reason:
+                case 'KVM_EXIT_HLT':
+                    print('Program complete (halted)')
+                    sys.exit(0)
 
-            print('Unhandled VM exit!')
-            sys.exit(1)
+                case 'KVM_EXIT_IO':
+                    print('I really should implement this...')
+                    sys.exit(2)
+
+                case 'KVM_EXIT_SHUTDOWN':
+                    print('VM shutdown')
+                    sys.exit(0)
+
+                case 'KVM_EXIT_INTERNAL_ERROR':
+                    print('Internal errors are probably bad?')
+                    sys.exit(1)
+
+                case _:
+                    print(f'Unhandled VM exit: {exit_reason}')
+                    break
 
 
 if __name__ == '__main__':
