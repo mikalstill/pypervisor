@@ -205,19 +205,42 @@ def main():
         # called a "VM Exit" and indicates that a protection violation in
         # the vCPU has signalled a request for us to do something.
         while True:
+            print('Running...')
             fcntl.ioctl(vcpu, KVM_RUN)
             kvm_run_s = kvm_run_t.from_buffer(kvm_run)
-            exit_reason = VM_EXIT_CODES[kvm_run_s.exit_reason]
+            exit_reason = VM_EXIT_CODES.get(
+                kvm_run_s.exit_reason,
+                f'Unknown exit reason: {kvm_run_s.exit_reason}'
+                )
             print(f'VM exit: {exit_reason}')
+            print()
 
             match exit_reason:
                 case 'KVM_EXIT_HLT':
                     print('Program complete (halted)')
                     sys.exit(0)
 
+                # Claude had the direction values backwards. qemu definitely
+                # agrees with this though.
+                # https://github.com/qemu/qemu/blob/master/linux-headers/linux/kvm.h#L245
                 case 'KVM_EXIT_IO':
-                    print('I really should implement this...')
-                    sys.exit(2)
+                    io = kvm_run_s.exit_reasons.io
+                    print(pretty_print_struct(io))
+                    print()
+
+                    # We only handle input to ioport 0x03f8 for now
+                    if io.direction == KVM_EXIT_IO_OUT and io.port == 0x3f8:
+                        data_ptr = ctypes.addressof(kvm_run_s) + io.data_offset
+                        data = ctypes.string_at(data_ptr, io.size)
+                        try:
+                            data_str = data.decode('ascii')
+                        except:
+                            data_str = 'failed to decode ASCII'
+                        print(f'Output: {data}, {data_str}')
+
+                    else:
+                        print('Not yet implemented...')
+                        sys.exit(1)
 
                 case 'KVM_EXIT_SHUTDOWN':
                     print('VM shutdown')
@@ -229,7 +252,7 @@ def main():
 
                 case _:
                     print(f'Unhandled VM exit: {exit_reason}')
-                    break
+                    sys.exit(1)
 
 
 if __name__ == '__main__':

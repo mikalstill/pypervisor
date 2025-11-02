@@ -18,10 +18,28 @@ class kvm_userspace_memory_region_t(ctypes.Structure):
     ]
 
 
-# Similarly, we also need a pythonic kvm_run structure.
+# Similarly, we also need a pythonic kvm_run structure including nested
+# structures.
 #
 # https://docs.kernel.org/virt/kvm/api.html#kvm-set-user-memory-region
 # https://github.com/torvalds/linux/blob/master/include/uapi/linux/kvm.h#L210
+
+
+class kvm_run_io_t(ctypes.Structure):
+    _fields_ = [
+        ('direction', ctypes.c_uint8),
+        ('size', ctypes.c_uint8),
+        ('port', ctypes.c_uint16),
+        ('count', ctypes.c_uint32),
+        ('data_offset', ctypes.c_uint64),
+    ]
+
+
+class kvm_exit_reason_t(ctypes.Union):
+    _fields_ = [
+        ('io', kvm_run_io_t)
+    ]
+
 
 class kvm_run_t(ctypes.Structure):
     _fields_ = [
@@ -42,6 +60,7 @@ class kvm_run_t(ctypes.Structure):
 
         # The exit_reasons part of the struct is... like totally complicated.
         # https://github.com/torvalds/linux/blob/master/include/uapi/linux/kvm.h#L231
+        ('exit_reasons', kvm_exit_reason_t),
     ]
 
 
@@ -106,6 +125,10 @@ class kvm_sregs_t(ctypes.Structure):
     ]
 
 
+# vCPU standard registers, including nested structures.
+#
+# https://docs.kernel.org/virt/kvm/api.html#kvm-get-regs
+# https://github.com/torvalds/linux/blob/master/arch/x86/include/uapi/asm/kvm.h#L117
 class kvm_regs_t(ctypes.Structure):
     _fields_ = [
         ('rax', ctypes.c_uint64),
